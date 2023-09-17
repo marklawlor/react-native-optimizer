@@ -2,7 +2,7 @@ import { pluginTester } from "./testing-utils";
 
 pluginTester({
   tests: {
-    "self closing tag": {
+    "will change self closing tag": {
       code: `
           import { Text } from "react-native";
           <Text />;`,
@@ -11,7 +11,7 @@ pluginTester({
           import { Text } from "react-native";
           <_NativeText />;`,
     },
-    "with closing tag": {
+    "will change closing tag": {
       code: `
           import { Text } from "react-native";
           <Text></Text>;`,
@@ -39,33 +39,22 @@ pluginTester({
           <_NativeText children="hello" />;`,
     },
     "will NOT change if the children are not JSXStrings": {
+      noChange: true,
       code: `
-          import { Text, View } from "react-native";
-          <Text>
-            <View />
-          </Text>;`,
-      output: `
           import { Text, View } from "react-native";
           <Text>
             <View />
           </Text>;`,
     },
     "will NOT change if any props are on the denyList": {
+      noChange: true,
       code: `
-          import { Text } from "react-native";
-          <Text onPress={() => {}} />;`,
-      output: `
           import { Text } from "react-native";
           <Text onPress={() => {}} />;`,
     },
     "will NOT change if any props are on the denyList (spread attributes)": {
+      noChange: true,
       code: `
-        import { Text } from "react-native";
-        const props = {
-          onPress: () => {},
-        };
-        <Text {...props} />;`,
-      output: `
         import { Text } from "react-native";
         const props = {
           onPress: () => {},

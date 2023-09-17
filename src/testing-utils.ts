@@ -1,5 +1,8 @@
 import { test, describe } from "bun:test";
-import { pluginTester as babelPluginTester } from "babel-plugin-tester";
+import {
+  TestObject,
+  pluginTester as babelPluginTester,
+} from "babel-plugin-tester";
 import plugin from "./plugin";
 import dedent from "dedent";
 
@@ -9,8 +12,15 @@ import dedent from "dedent";
 // TEST_ONLY="" - use to run only one test
 // DEBUG=* - use to debug output
 
+type Tests = Record<string, TestObject & { noChange?: true }>;
+
 export function pluginTester(
-  config: NonNullable<Parameters<typeof babelPluginTester>[0]>
+  config: Omit<
+    NonNullable<Parameters<typeof babelPluginTester>[0]>,
+    "tests"
+  > & {
+    tests: Tests;
+  }
 ) {
   if (!config.tests) return;
 
@@ -20,6 +30,9 @@ export function pluginTester(
 
       test.code = dedent(test.code?.trim() ?? "");
       test.output = dedent(test.output?.trim() ?? "");
+      if (test.noChange) {
+        test.output = test.code;
+      }
 
       return [name, test];
     })
