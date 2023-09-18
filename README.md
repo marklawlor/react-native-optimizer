@@ -14,7 +14,6 @@ This library is a prototype, ideas and contributes are very welcome.
 
 ### `<Text />` optimizations
 
-- [Prevent `style` optimization bailout](https://github.com/marklawlor/react-native-optimizer/issues/3)
 - [Prevent `selectionColor` optimization bailout](https://github.com/marklawlor/react-native-optimizer/issues/2)
 - [Prevent `numberOfLines` optimization bailout](https://github.com/marklawlor/react-native-optimizer/issues/1)
 
