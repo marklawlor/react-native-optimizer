@@ -4,7 +4,7 @@ React Native, like many other libraries, has various checks/mappings either for 
 
 This library is a prototype, ideas and contributes are very welcome.
 
-## Optimizations
+## Available Optimizations
 
 ### `Text` -> `NativeText`
 

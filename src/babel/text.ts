@@ -3,15 +3,16 @@ import { addNamed } from "@babel/helper-module-imports";
 
 const nameHint = "_NativeText";
 
-export function nativeTextTags(path: NodePath<t.JSXOpeningElement>) {
+export function textOptimizations(path: NodePath<t.JSXOpeningElement>) {
+  /**
+   * Ensure we are processes a Text element from 'react-native' and not another library
+   */
   if (!t.isJSXIdentifier(path.node.name)) {
     return;
   }
-
   const jsxElementName = path.node.name.name;
   if (jsxElementName !== "Text") return;
 
-  // Check the parent is a JSX element
   const parent = path.parent;
   if (!t.isJSXElement(parent)) return;
 
@@ -20,20 +21,35 @@ export function nativeTextTags(path: NodePath<t.JSXOpeningElement>) {
   if (!binding) return;
   if (binding.kind === "module") {
     const parentNode = binding.path.parent;
-
-    if (!t.isImportDeclaration(parentNode)) {
-      return;
-    }
-
-    const importSource = parentNode.source.value;
-
-    if (importSource !== "react-native") {
+    if (
+      !t.isImportDeclaration(parentNode) ||
+      parentNode.source.value !== "react-native"
+    ) {
       return;
     }
   }
 
+  /**
+   * This is a Text element from 'react-native'!
+   *
+   * Optimize it!
+   */
+
+  /**
+   * Start by optimizing the props
+   */
+
+  // optimizeStyleTag(path);
+
+  /**
+   * Check if this element could optimized into NativeText
+   */
   if (!isChildrenOnlyStrings(path, parent)) return;
   if (hasBlockListProps(path)) return;
+
+  /**
+   * Convert to a NativeText element
+   */
 
   // Add the import for NativeText
   addNamed(
@@ -50,13 +66,33 @@ export function nativeTextTags(path: NodePath<t.JSXOpeningElement>) {
 
   // If the element is not selfClosing, we need to change the closing element
   const closingElement = parent.closingElement;
-
   if (
     closingElement &&
     t.isJSXIdentifier(closingElement.name) &&
     closingElement.name.name === "Text"
   ) {
     closingElement.name.name = nameHint;
+  }
+}
+
+function optimizeStyleTag(path: NodePath<t.JSXOpeningElement>) {
+  let shouldImportFlattenTextStyle = false;
+  const nameHint = "_flattenTextStyle";
+
+  for (const [index, attr] of path.node.attributes.entries()) {
+    if (
+      t.isJSXAttribute(attr) &&
+      t.isJSXIdentifier(attr.name, { name: "style" })
+    ) {
+      shouldImportFlattenTextStyle = true;
+      path.node.attributes[index] = t.jsxSpreadAttribute(
+        t.callExpression(t.identifier(nameHint), [attr.value as t.Expression])
+      );
+    }
+  }
+
+  if (shouldImportFlattenTextStyle) {
+    addNamed(path, "flattenTextStyle", "react-native-optimizer", { nameHint });
   }
 }
 

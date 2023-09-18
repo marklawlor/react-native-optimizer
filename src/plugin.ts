@@ -1,5 +1,5 @@
 import { declare } from "@babel/helper-plugin-utils";
-import { nativeTextTags } from "./native-text";
+import { textOptimizations } from "./babel/text";
 
 export default declare((api) => {
   api.assertVersion(7);
@@ -8,7 +8,7 @@ export default declare((api) => {
     name: "replace-react-native-text",
     visitor: {
       JSXOpeningElement(path) {
-        nativeTextTags(path);
+        textOptimizations(path);
       },
     },
   };
