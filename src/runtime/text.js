@@ -1,7 +1,21 @@
 import { flattenStyle } from "react-native/Libraries/StyleSheet/flattenStyle";
 
+const propsMap = new WeakMap();
+
 export function flattenTextStyle(style) {
-  const props = {};
+  /**
+   * Don't mutate the original style object.
+   */
+  let props = propsMap.get(style);
+
+  /**
+   * If we've already computed the props for this style object, return them.
+   * This keeps the same object reference for the mutated style object and also allows us to skip `flattenStyle`
+   */
+  if (props) return props;
+
+  props = {};
+  propsMap.set(style, props);
 
   // https://github.com/facebook/react-native/blob/441822923c9509dbb28bceacf6fc590c157e15bb/packages/react-native/Libraries/Text/Text.js#L214
   style = flattenStyle(style);
