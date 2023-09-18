@@ -34,7 +34,7 @@ export default function (plop) {
           template: `/**
  * @type {import('babel-plugin-tester').TestObject}
  */
-module.exports = {};`,
+module.exports = { only: false };`,
         },
       ];
 

@@ -1,7 +1,11 @@
-import { NodePath, types as t } from "@babel/core";
+import { Node, NodePath, types as t } from "@babel/core";
 import { addNamed } from "@babel/helper-module-imports";
 
 const nameHint = "_NativeText";
+const flattenTextStyleNameHint = "_flattenTextStyle";
+
+const nativeTextImports = new WeakMap();
+const flattenStyleImports = new WeakMap();
 
 export function textOptimizations(path: NodePath<t.JSXOpeningElement>) {
   /**
@@ -12,6 +16,9 @@ export function textOptimizations(path: NodePath<t.JSXOpeningElement>) {
   }
   const jsxElementName = path.node.name.name;
   if (jsxElementName !== "Text") return;
+
+  const program = getProgramNode(path);
+  if (!program) return;
 
   const parent = path.parent;
   if (!t.isJSXElement(parent)) return;
@@ -39,7 +46,7 @@ export function textOptimizations(path: NodePath<t.JSXOpeningElement>) {
    * Start by optimizing the props
    */
 
-  // optimizeStyleTag(path);
+  optimizeStyleTag(path, program);
 
   /**
    * Check if this element could optimized into NativeText
@@ -52,12 +59,17 @@ export function textOptimizations(path: NodePath<t.JSXOpeningElement>) {
    */
 
   // Add the import for NativeText
-  addNamed(
-    path,
-    "NativeText",
-    "react-native/Libraries/Components/Text/TextNativeComponent",
-    { nameHint }
-  );
+  if (!nativeTextImports.has(program)) {
+    nativeTextImports.set(
+      program,
+      addNamed(
+        path,
+        "NativeText",
+        "react-native/Libraries/Components/Text/TextNativeComponent",
+        { nameHint }
+      )
+    );
+  }
 
   path.node.name.name = nameHint;
 
@@ -75,9 +87,9 @@ export function textOptimizations(path: NodePath<t.JSXOpeningElement>) {
   }
 }
 
-function optimizeStyleTag(path: NodePath<t.JSXOpeningElement>) {
+function optimizeStyleTag(path: NodePath<t.JSXOpeningElement>, program: Node) {
   let shouldImportFlattenTextStyle = false;
-  const nameHint = "_flattenTextStyle";
+  const nameHint = flattenTextStyleNameHint;
 
   for (const [index, attr] of path.node.attributes.entries()) {
     if (
@@ -85,14 +97,23 @@ function optimizeStyleTag(path: NodePath<t.JSXOpeningElement>) {
       t.isJSXIdentifier(attr.name, { name: "style" })
     ) {
       shouldImportFlattenTextStyle = true;
-      path.node.attributes[index] = t.jsxSpreadAttribute(
-        t.callExpression(t.identifier(nameHint), [attr.value as t.Expression])
-      );
+
+      if (
+        t.isJSXExpressionContainer(attr.value) &&
+        !t.isJSXEmptyExpression(attr.value.expression)
+      ) {
+        path.node.attributes[index] = t.jsxSpreadAttribute(
+          t.callExpression(t.identifier(nameHint), [attr.value.expression])
+        );
+      }
     }
   }
 
-  if (shouldImportFlattenTextStyle) {
-    addNamed(path, "flattenTextStyle", "react-native-optimizer", { nameHint });
+  if (shouldImportFlattenTextStyle && !flattenStyleImports.has(program)) {
+    flattenStyleImports.set(
+      program,
+      addNamed(path, "flattenTextStyle", "react-native-optimizer", { nameHint })
+    );
   }
 }
 
@@ -156,21 +177,32 @@ const denyList = new Set([
 function hasBlockListProps(path: NodePath<t.JSXOpeningElement>) {
   return path.node.attributes.some((attr) => {
     if (t.isJSXSpreadAttribute(attr)) {
+      if (t.isCallExpression(attr.argument)) {
+        if (t.isIdentifier(attr.argument.callee)) {
+          if (attr.argument.callee.name === flattenTextStyleNameHint) {
+            return false;
+          }
+        }
+        return true;
+      }
+
       if (t.isIdentifier(attr.argument)) {
         const binding = path.scope.getBinding(attr.argument.name);
-        if (binding && t.isObjectExpression(binding.path.node)) {
-          const objectProperties = binding.path.node.properties;
+        if (binding) {
+          if (t.isObjectExpression(binding.path.node)) {
+            const objectProperties = binding.path.node.properties;
 
-          // Check each property in the object against propsToCheck
-          return objectProperties.some((prop) => {
-            if (
-              t.isObjectProperty(prop) &&
-              t.isIdentifier(prop.key) &&
-              denyList.has(prop.key.name)
-            ) {
-              return true;
-            }
-          });
+            // Check each property in the object against propsToCheck
+            return objectProperties.some((prop) => {
+              if (
+                t.isObjectProperty(prop) &&
+                t.isIdentifier(prop.key) &&
+                denyList.has(prop.key.name)
+              ) {
+                return true;
+              }
+            });
+          }
         }
       }
 
@@ -187,4 +219,12 @@ function hasBlockListProps(path: NodePath<t.JSXOpeningElement>) {
       return false;
     }
   });
+}
+
+function getProgramNode(path: NodePath) {
+  let currentPath = path;
+  while (currentPath && currentPath.parentPath) {
+    currentPath = currentPath.parentPath;
+  }
+  return currentPath ? currentPath.node : null;
 }

@@ -1,10 +1,10 @@
 import path from "path";
-import { TestObject, pluginTester } from "babel-plugin-tester";
-import { test, describe } from "bun:test";
+import { pluginTester } from "babel-plugin-tester";
+import { describe, it } from "bun:test";
 import plugin from "../plugin";
 
 (globalThis as any).describe = describe;
-(globalThis as any).it = test;
+(globalThis as any).it = it;
 
 pluginTester({
   plugin,
