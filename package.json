@@ -4,7 +4,8 @@
   "type": "module",
   "scripts": {
     "build": "tsc",
-    "test": "bun test"
+    "test": "bun test",
+    "test:new": "bunx plop fixture"
   },
   "devDependencies": {
     "@babel/core": "^7.22.20",
@@ -12,6 +13,7 @@
     "@types/babel__helper-plugin-utils": "^7.10.1",
     "babel-plugin-tester": "^11.0.4",
     "bun-types": "latest",
+    "plop": "^4.0.0",
     "react-native": "^0.72.4"
   },
   "peerDependencies": {
